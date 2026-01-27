@@ -11,12 +11,16 @@ import com.studica.frc.AHRS.NavXComType;
 import com.studica.frc.AHRS;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.Constants.ModuleConstants;
+import frc.robot.Constants.ConfigConsts;
+import frc.robot.Constants.DriveConsts;
+import frc.robot.Constants.ModuleConsts;
 
 class SwerveModule {
     private final TalonFX speedMotor;
@@ -42,7 +46,7 @@ class SwerveModule {
         this.reverseDirectionMotor = reverseDirectionMotor;
         this.reverseAbsoluteEncoder = reverseAbsoluteEncoder;
 
-        this.directionController = new PIDController(ModuleConstants.directionP, 0, 0);
+        this.directionController = new PIDController(ModuleConsts.directionP, 0, 0);
         this.directionController.enableContinuousInput(-Math.PI, Math.PI);
 
         resetEncoders();
@@ -57,7 +61,7 @@ class SwerveModule {
         // Do the following unit conversion:
         //     (MotorRotation) * (Meters / MotorRotation) -> (Meters)
         double meters =
-            motorRotations * ModuleConstants.speedMotorRotationToMeters;
+            motorRotations * ModuleConsts.speedMotorRotationToMeters;
 
         int reverseFactor = (this.reverseSpeedMotor ? -1 : 1);
         return meters * reverseFactor;
@@ -70,7 +74,7 @@ class SwerveModule {
         // Do the following unit conversion:
         //     (MotorRotation / Sec) * (Meters / MotorRotation) -> (Meters / Sec)
         double metersPerSec =
-            motorRotationsPerSec * ModuleConstants.speedMotorRotationToMeters;
+            motorRotationsPerSec * ModuleConsts.speedMotorRotationToMeters;
 
         int reverseFactor = (this.reverseSpeedMotor ? -1 : 1);
         return metersPerSec * reverseFactor;
@@ -85,7 +89,7 @@ class SwerveModule {
         //     (MotorRotation) * (WheelRotationRadians / MotorRotation)
         //         -> WheelRotationRadians
         double radians =
-            motorRotations * ModuleConstants.radiansPerDirectionMotorRotation;
+            motorRotations * ModuleConsts.radiansPerDirectionMotorRotation;
 
         int reverseFactor = (this.reverseDirectionMotor ? -1 : 1);
         return radians * reverseFactor;
@@ -99,7 +103,7 @@ class SwerveModule {
         //     (MotorRotation / Sec ) * (WheelRotationRadians / MotorRotation)
         //         -> WheelRotationRadians
         double radiansPerSec =
-            motorRotationsPerSec * ModuleConstants.radiansPerDirectionMotorRotation;
+            motorRotationsPerSec * ModuleConsts.radiansPerDirectionMotorRotation;
 
         int reverseFactor = (this.reverseDirectionMotor ? -1 : 1);
         return radiansPerSec * reverseFactor;
@@ -118,7 +122,7 @@ class SwerveModule {
         // Do the following unit coversion:
         //     (Radians) * (MotorRotation / Radians) -> MotorRotation
         double currMotorRotations =
-            absoluteEncoderRadians * ModuleConstants.motorRotationsPerRadian;
+            absoluteEncoderRadians * ModuleConsts.motorRotationsPerRadian;
         this.directionMotor.setPosition(currMotorRotations);
     }
 
@@ -140,7 +144,7 @@ class SwerveModule {
         state.optimize(getState().angle);
 
         double newSpeedMotorVal =
-            state.speedMetersPerSecond / ModuleConstants.maxMetersPerSecToMotorSpeed;
+            state.speedMetersPerSecond / DriveConsts.maxMetersPerSecToMotorSpeed;
         speedMotor.set(newSpeedMotorVal);
 
         double newDirectionMotorVal = directionController.calculate(
@@ -160,11 +164,81 @@ class SwerveDrive {
     //     * rf: right-front
     //     * lb: left-back
     //     * rb: right-back
+    private final SwerveModule lfModule = new SwerveModule(
+        ConfigConsts.lfSpeedMotorId,
+        ConfigConsts.lfDirectionMotorId,
+        ConfigConsts.lfEncoderId,
+        ConfigConsts.reverseLfSpeedMotor,
+        ConfigConsts.reverseLfDirectionMotor,
+        ConfigConsts.reverseLfEncoder);
+
+    private final SwerveModule rfModule = new SwerveModule(
+        ConfigConsts.rfSpeedMotorId,
+        ConfigConsts.rfDirectionMotorId,
+        ConfigConsts.rfEncoderId,
+        ConfigConsts.reverseRfSpeedMotor,
+        ConfigConsts.reverseRfDirectionMotor,
+        ConfigConsts.reverseRfEncoder);
+
+    private final SwerveModule lbModule = new SwerveModule(
+        ConfigConsts.lbSpeedMotorId,
+        ConfigConsts.lbDirectionMotorId,
+        ConfigConsts.lbEncoderId,
+        ConfigConsts.reverseLbSpeedMotor,
+        ConfigConsts.reverseLbDirectionMotor,
+        ConfigConsts.reverseLbEncoder);
+
+    private final SwerveModule rbModule = new SwerveModule(
+        ConfigConsts.rbSpeedMotorId,
+        ConfigConsts.rbDirectionMotorId,
+        ConfigConsts.rbEncoderId,
+        ConfigConsts.reverseRbSpeedMotor,
+        ConfigConsts.reverseRbDirectionMotor,
+        ConfigConsts.reverseRbEncoder);
+
+    private AHRS navxMxp = new AHRS(NavXComType.kMXP_SPI);
+
+    public SwerveDrive() {
+        // Calibrate the the NavXMXP in a separate thread, so that it doesn't block
+        // other initialization.
+        new Thread(() -> {
+            try {
+                Thread.sleep(1000);
+                navxMxp.reset();
+            } catch (Exception e) {
+            }
+        }).start();
+    }
+
+    public void setModules(double xSpeed, double ySpeed, double turnSpeed) {
+        // TODO: Check that "getRotation2d()" returns an angle in radians, and that
+        // it is CCW positive.
+        ChassisSpeeds chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+            xSpeed, ySpeed, turnSpeed, navxMxp.getRotation2d());
+
+        SwerveModuleState[] moduleStates =
+            DriveConsts.driveKinematics.toSwerveModuleStates(chassisSpeeds);
+        SwerveDriveKinematics.desaturateWheelSpeeds(
+            moduleStates, DriveConsts.maxMetersPerSecToMotorSpeed);
+
+        lfModule.setDesiredState(moduleStates[0]);
+        rfModule.setDesiredState(moduleStates[1]);
+        lbModule.setDesiredState(moduleStates[2]);
+        rbModule.setDesiredState(moduleStates[3]);
+    }
+
+    public void stopModules() {
+        lfModule.stop();
+        rfModule.stop();
+        lbModule.stop();
+        rbModule.stop();
+    }
 }
 
 public class Robot extends TimedRobot {
     XboxController controller = new XboxController(0);
     AHRS navxMxp = new AHRS(NavXComType.kMXP_SPI);
+    SwerveDrive swerve = new SwerveDrive();
 
     public Robot() {}
 
@@ -175,30 +249,17 @@ public class Robot extends TimedRobot {
     public void autonomousInit() {}
 
     @Override
-    public void autonomousPeriodic() {}
+    public void autonomousPeriodic() {
+        swerve.stopModules();
+    }
 
     @Override
     public void teleopInit() {}
 
-    /*
-    private double stickToDirection(double stickX, double stickY) {
-        double angleRadians = Math.atan2(stickY, stickX);
-        double angleDegrees = Math.toDegrees(angleRadians);
-
-        // "angleDegrees" represents an angle on the Cartesian plane, where 0 degrees
-        // points from the origin to the postive X-axis, and the angle increases when
-        // moving in the counter-clockwise direction (such that 90 degrees points
-        // from the origin to the positive Y-axis).
-        //
-        // Our swerve drive code accepts angles where "North" represents 0 degrees,
-        // "East" represents 90 degrees, "West" represents -90 degrees, and "South"
-        // represents -180/180 degrees. The following line performs this conversion.
-        return (Utils.normalizeAngle(angleDegrees) - 90) * -1;
-    }
-    */
-
     @Override
-    public void teleopPeriodic() {}
+    public void teleopPeriodic() {
+        swerve.stopModules();
+    }
 }
 
 /*

@@ -2,10 +2,12 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
 
 public final class Constants {
-    public static final class ConfigConst {
+    public static final class ConfigConsts {
         // Shortened names for convenience:
         //     * lf: left-front
         //     * rf: right-front
@@ -42,7 +44,7 @@ public final class Constants {
         public static final boolean reverseRbEncoder = false;
     }
 
-    public static final class ModuleConstants {
+    public static final class ModuleConsts {
         /******************* Constants for direction wheels *******************/
         // TODO: Is the wheel diameter actually 4 inches?
         public static final double wheelDiameterMeters = Units.inchesToMeters(4);
@@ -70,6 +72,20 @@ public final class Constants {
 
         // "P" component of our direction PID controller.
         public static final double directionP = 0;
+    }
+
+    public static final class DriveConsts {
+        // TODO: Need to actually measure this pair of values.
+        // Distance between right and left wheels.
+        public static final double trackWidth = Units.inchesToMeters(20);
+        // Distance between front and back wheels.
+        public static final double wheelBase = Units.inchesToMeters(20);
+        public static final SwerveDriveKinematics driveKinematics =
+            new SwerveDriveKinematics(
+                new Translation2d(wheelBase / 2, -trackWidth / 2),
+                new Translation2d(wheelBase / 2, trackWidth / 2),
+                new Translation2d(-wheelBase / 2, -trackWidth / 2),
+                new Translation2d(-wheelBase / 2, trackWidth / 2));
 
         // The factor we divide our desired "metersPerSec" by to actually set our
         // motor's speed.
