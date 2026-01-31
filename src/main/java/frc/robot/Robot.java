@@ -156,6 +156,59 @@ class SwerveModule {
         speedMotor.set(0);
         directionMotor.set(0);
     }
+
+    /***********************************************************************************/
+    /*                      Helper functions/variables for debugging                   */
+    /***********************************************************************************/
+    // Make the wheels rotate once for speed.
+    private double nextOneSpeedRotationMeters = 0;
+    public void setNextOneSpeedRotation(boolean backwards) {
+        double currDrivePositionMeters = getDrivePosition();
+        if(backwards) {
+            nextOneSpeedRotationMeters =
+                currDrivePositionMeters - ModuleConsts.metersPerWheelRotation;
+        } else {
+            nextOneSpeedRotationMeters =
+                currDrivePositionMeters + ModuleConsts.metersPerWheelRotation;
+        }
+    }
+    public void moveForOneSpeedRotation() {
+        double currDrivePositionMeters = getDrivePosition();
+        // 5cm tolerance?
+        double toleranceMeters = 0.05;
+        if(currDrivePositionMeters < (nextOneSpeedRotationMeters - toleranceMeters)) {
+            speedMotor.set(0.1);
+        } else if (currDrivePositionMeters > (nextOneSpeedRotationMeters + toleranceMeters)) {
+            speedMotor.set(-0.1);
+        }
+    }
+
+    // Make the wheels rotate once for direction.
+    private double nextOneDirectionRotationRad = 0;
+    public void setNextOneDirectionRotation(boolean backwards) {
+        double currDriveDirectionRad = getTurningPosition();
+        if(backwards) {
+             nextOneDirectionRotationRad =
+                 currDriveDirectionRad - ModuleConsts.radiansPerWheelRotation;
+        } else {
+            nextOneDirectionRotationRad =
+                 currDriveDirectionRad + ModuleConsts.radiansPerWheelRotation;
+        }
+    }
+    public void moveForOneDirectionRotation() {
+        double currDriveDirectionRad = getTurningPosition();
+        // 5 degrees tolerance?
+        double toleranceRad = 5 * (Math.PI / 180);
+        if(currDriveDirectionRad < (nextOneDirectionRotationRad - toleranceRad)) {
+            directionMotor.set(0.1);
+        } else if (currDriveDirectionRad > (nextOneDirectionRotationRad + toleranceRad)) {
+            directionMotor.set(-0.1);
+        }
+    }
+
+    // TODO (for Sahil): Write a function that makes the wheels spin (speed or direction)
+    // at some configurable speed for X seconds. Mainly for deciding what we want our
+    // constants to be.
 }
 
 class SwerveDrive {
