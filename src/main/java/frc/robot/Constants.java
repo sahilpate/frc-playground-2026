@@ -15,43 +15,51 @@ public final class Constants {
         //     * rb: right-back
 
         // TODO: Fill in the actual IDs and booleans.
-        public static final int lfSpeedMotorId = 0;
-        public static final int lfDirectionMotorId = 1;
-        public static final int lfEncoderId = 2;
-        public static final boolean reverseLfSpeedMotor = false;
-        public static final boolean reverseLfDirectionMotor = false;
+        public static final int lfSpeedMotorId = 1;
+        public static final int lfDirectionMotorId = 2;
+        public static final int lfEncoderId = 0;
+        public static final boolean reverseLfSpeedMotor = true;
+        public static final boolean reverseLfDirectionMotor = true;
         public static final boolean reverseLfEncoder = false;
+		public static final boolean reverseLfSpeedEncoder = false;
 
-        public static final int rfSpeedMotorId = 0;
-        public static final int rfDirectionMotorId = 1;
-        public static final int rfEncoderId = 2;
+        public static final int rfSpeedMotorId = 4;
+        public static final int rfDirectionMotorId = 5;
+        public static final int rfEncoderId = 3;
         public static final boolean reverseRfSpeedMotor = false;
-        public static final boolean reverseRfDirectionMotor = false;
+        public static final boolean reverseRfDirectionMotor = true;
         public static final boolean reverseRfEncoder = false;
+		public static final boolean reverseRfSpeedEncoder = true;
 
-        public static final int lbSpeedMotorId = 0;
-        public static final int lbDirectionMotorId = 1;
-        public static final int lbEncoderId = 2;
-        public static final boolean reverseLbSpeedMotor = false;
-        public static final boolean reverseLbDirectionMotor = false;
+        public static final int lbSpeedMotorId = 7;
+        public static final int lbDirectionMotorId = 8;
+        public static final int lbEncoderId = 6;
+        public static final boolean reverseLbSpeedMotor = true;
+        public static final boolean reverseLbDirectionMotor = true;
         public static final boolean reverseLbEncoder = false;
+		public static final boolean reverseLbSpeedEncoder = false;
 
-        public static final int rbSpeedMotorId = 0;
-        public static final int rbDirectionMotorId = 1;
-        public static final int rbEncoderId = 2;
+        public static final int rbSpeedMotorId = 10;
+        public static final int rbDirectionMotorId = 11;
+        public static final int rbEncoderId = 9;
         public static final boolean reverseRbSpeedMotor = false;
-        public static final boolean reverseRbDirectionMotor = false;
+        public static final boolean reverseRbDirectionMotor = true;
         public static final boolean reverseRbEncoder = false;
+		public static final boolean reverseRbSpeedEncoder = true;
     }
 
     public static final class ModuleConsts {
         /******************* Constants for direction wheels *******************/
-        // TODO: Is the wheel diameter actually 4 inches?
         public static final double wheelDiameterMeters = Units.inchesToMeters(4);
         // TODO: I just picked 6.82 arbitrarily from WCP's gear ratio docs. We need
         // to figure out what value actually belongs here. See:
         // docs.wcproducts.com/welcome/gearboxes/wcp-swerve-x2/general-info/ratio-options
-        public static final double wheelRotationPerSpeedMotorRotation = 1 / 6.82;
+
+        // public static final double wheelRotationPerSpeedMotorRotation = 1 / 6.82;
+		// Grabbed from eyeballing...
+		public static final double wheelRotationPerSpeedMotorRotation =
+			1 / 42.22435516734016;
+
         // A.K.A., the circumference of a wheel.
         public static final double metersPerWheelRotation = Math.PI * wheelDiameterMeters;
         public static final double speedMotorRotationToMeters =
@@ -71,15 +79,14 @@ public final class Constants {
             (1 / radiansPerWheelRotation) * directionMotorRotationPerWheelRotation;
 
         // "P" component of our direction PID controller.
-        public static final double directionP = 0;
+        public static final double directionP = 0.75 / Math.PI;
     }
 
     public static final class DriveConsts {
-        // TODO: Need to actually measure this pair of values.
         // Distance between right and left wheels.
-        public static final double trackWidth = Units.inchesToMeters(20);
+        public static final double trackWidth = Units.inchesToMeters(22.5);
         // Distance between front and back wheels.
-        public static final double wheelBase = Units.inchesToMeters(20);
+        public static final double wheelBase = Units.inchesToMeters(22.5);
         public static final SwerveDriveKinematics driveKinematics =
             new SwerveDriveKinematics(
                 new Translation2d(wheelBase / 2, -trackWidth / 2),
@@ -93,6 +100,10 @@ public final class Constants {
         // validated that our `getDrivePosition()` works, we can hopefully use
         // `getDriveVelocity()` to map our [-1, 1] motor inputs to the max velocity
         // we want the wheels to move at.
-        public static final double maxMetersPerSecToMotorSpeed = 5;
+        public static final double maxMetersPerSecToMotorSpeed = 4;
+
+		// TODO: This value's been copy+pasted from the reference project. Need to fine
+		// tune this.
+		public static final double maxRadPerSecToMotorSpeed = 2 * 2 * Math.PI;
     }
 }

@@ -9,6 +9,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.Constants.ConfigConsts;
 import frc.robot.Constants.DriveConsts;
+import edu.wpi.first.math.geometry.Rotation2d;
 
 public class SwerveDrive {
     // Shortened names for convenience:
@@ -17,36 +18,44 @@ public class SwerveDrive {
     //     * lb: left-back
     //     * rb: right-back
     private final SwerveModule lfModule = new SwerveModule(
+        "lf",
         ConfigConsts.lfSpeedMotorId,
         ConfigConsts.lfDirectionMotorId,
         ConfigConsts.lfEncoderId,
         ConfigConsts.reverseLfSpeedMotor,
         ConfigConsts.reverseLfDirectionMotor,
-        ConfigConsts.reverseLfEncoder);
+	    ConfigConsts.reverseLfEncoder,
+	    ConfigConsts.reverseLfSpeedEncoder);
 
     private final SwerveModule rfModule = new SwerveModule(
+        "rf",
         ConfigConsts.rfSpeedMotorId,
         ConfigConsts.rfDirectionMotorId,
         ConfigConsts.rfEncoderId,
         ConfigConsts.reverseRfSpeedMotor,
         ConfigConsts.reverseRfDirectionMotor,
-        ConfigConsts.reverseRfEncoder);
+	    ConfigConsts.reverseRfEncoder,
+	    ConfigConsts.reverseRfSpeedEncoder);
 
     private final SwerveModule lbModule = new SwerveModule(
+        "lb",
         ConfigConsts.lbSpeedMotorId,
         ConfigConsts.lbDirectionMotorId,
         ConfigConsts.lbEncoderId,
         ConfigConsts.reverseLbSpeedMotor,
         ConfigConsts.reverseLbDirectionMotor,
-        ConfigConsts.reverseLbEncoder);
+	    ConfigConsts.reverseLbEncoder,
+	    ConfigConsts.reverseLbSpeedEncoder);
 
     private final SwerveModule rbModule = new SwerveModule(
+        "rb",
         ConfigConsts.rbSpeedMotorId,
         ConfigConsts.rbDirectionMotorId,
         ConfigConsts.rbEncoderId,
         ConfigConsts.reverseRbSpeedMotor,
         ConfigConsts.reverseRbDirectionMotor,
-        ConfigConsts.reverseRbEncoder);
+	    ConfigConsts.reverseRbEncoder,
+	    ConfigConsts.reverseRbSpeedEncoder);
 
     private AHRS navxMxp = new AHRS(NavXComType.kMXP_SPI);
 
@@ -54,11 +63,11 @@ public class SwerveDrive {
         // Calibrate the the NavXMXP in a separate thread, so that it doesn't block
         // other initialization.
         new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-                navxMxp.reset();
-            } catch (Exception e) {
-            }
+                try {
+                    Thread.sleep(1000);
+                    navxMxp.reset();
+                } catch (Exception e) {
+                }
         }).start();
     }
 
@@ -73,11 +82,31 @@ public class SwerveDrive {
         SwerveDriveKinematics.desaturateWheelSpeeds(
             moduleStates, DriveConsts.maxMetersPerSecToMotorSpeed);
 
-        lfModule.setDesiredState(moduleStates[0]);
-        rfModule.setDesiredState(moduleStates[1]);
-        lbModule.setDesiredState(moduleStates[2]);
-        rbModule.setDesiredState(moduleStates[3]);
+		/*
+          lfModule.setDesiredState(moduleStates[0]);
+          rfModule.setDesiredState(moduleStates[1]);
+          lbModule.setDesiredState(moduleStates[2]);
+          rbModule.setDesiredState(moduleStates[3]);
+		*/
+
+		lfModule.setDesiredState(moduleStates[1]);
+        rfModule.setDesiredState(moduleStates[0]);
+        lbModule.setDesiredState(moduleStates[3]);
+        rbModule.setDesiredState(moduleStates[2]);
     }
+
+	public void setWheelsToAngle(double angleRadians, double tmp) {
+		double speed = 0;
+		Rotation2d rot2d = new Rotation2d(angleRadians);
+		SwerveModuleState swerveModuleState = new SwerveModuleState(speed, rot2d);
+
+		lfModule.setDesiredState(swerveModuleState);
+		rfModule.setDesiredState(swerveModuleState);
+		lbModule.setDesiredState(swerveModuleState);
+		rbModule.setDesiredState(swerveModuleState);
+
+		lfModule.log();
+	}
 
     public void stopModules() {
         lfModule.stop();

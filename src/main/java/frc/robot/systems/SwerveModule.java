@@ -10,6 +10,8 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.Constants.DriveConsts;
 import frc.robot.Constants.ModuleConsts;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 public class SwerveModule {
     private final TalonFX speedMotor;
     private final TalonFX directionMotor;
@@ -21,11 +23,16 @@ public class SwerveModule {
     private final boolean reverseDirectionMotor;
     private final boolean reverseAbsoluteEncoder;
 
+	private final boolean reverseSpeedEncoder;
+
     private final PIDController directionController;
 
-    public SwerveModule(int speedMotorId, int directionMotorId, int absoluteEncoderId,
-                        boolean reverseSpeedMotor, boolean reverseDirectionMotor,
-                        boolean reverseAbsoluteEncoder) {
+	String moduleName;
+
+    public SwerveModule(String moduleName, int speedMotorId, int directionMotorId,
+						int absoluteEncoderId, boolean reverseSpeedMotor,
+						boolean reverseDirectionMotor, boolean reverseAbsoluteEncoder,
+						boolean reverseSpeedEncoder) {
         this.speedMotor = new TalonFX(speedMotorId);
         this.directionMotor = new TalonFX(directionMotorId);
         this.absoluteEncoder = new CoreCANcoder(absoluteEncoderId);
@@ -33,9 +40,13 @@ public class SwerveModule {
         this.reverseSpeedMotor = reverseSpeedMotor;
         this.reverseDirectionMotor = reverseDirectionMotor;
         this.reverseAbsoluteEncoder = reverseAbsoluteEncoder;
+		this.reverseSpeedEncoder = reverseSpeedEncoder;
 
         this.directionController = new PIDController(ModuleConsts.directionP, 0, 0);
         this.directionController.enableContinuousInput(-Math.PI, Math.PI);
+
+		// Used to tell motors apart in SmartDashboard logging.
+		this.moduleName = moduleName;
 
         resetEncoders();
     }
@@ -51,7 +62,7 @@ public class SwerveModule {
         double meters =
             motorRotations * ModuleConsts.speedMotorRotationToMeters;
 
-        int reverseFactor = (this.reverseSpeedMotor ? -1 : 1);
+        int reverseFactor = (this.reverseSpeedEncoder ? -1 : 1);
         return meters * reverseFactor;
     }
 
@@ -64,7 +75,7 @@ public class SwerveModule {
         double metersPerSec =
             motorRotationsPerSec * ModuleConsts.speedMotorRotationToMeters;
 
-        int reverseFactor = (this.reverseSpeedMotor ? -1 : 1);
+        int reverseFactor = (this.reverseSpeedEncoder ? -1 : 1);
         return metersPerSec * reverseFactor;
     }
 
@@ -116,7 +127,7 @@ public class SwerveModule {
 
     public SwerveModuleState getState() {
         return new SwerveModuleState(
-            getDriveVelocity(), new Rotation2d(getTurningPosition()));
+            getDriveVelocity(), new Rotation2d(getAbsoluteEncoderRad()));
     }
 
     public void setDesiredState(SwerveModuleState state) {
@@ -131,13 +142,18 @@ public class SwerveModule {
 
         state.optimize(getState().angle);
 
+		SmartDashboard.putNumber("DesiredAngle", state.angle.getDegrees());
+
         double newSpeedMotorVal =
             state.speedMetersPerSecond / DriveConsts.maxMetersPerSecToMotorSpeed;
-        speedMotor.set(newSpeedMotorVal);
+	    int speedReverse = reverseSpeedMotor ? -1 : 1;
+        speedMotor.set(newSpeedMotorVal * speedReverse);
 
         double newDirectionMotorVal = directionController.calculate(
-            getTurningPosition(), state.angle.getRadians());
-        directionMotor.set(newDirectionMotorVal);
+            getAbsoluteEncoderRad(), state.angle.getRadians());
+		SmartDashboard.putNumber("DirMotorVal", newDirectionMotorVal);
+		int directionReverse = reverseDirectionMotor ? -1 : 1;
+        directionMotor.set(newDirectionMotorVal * directionReverse);
     }
 
     public void stop() {
@@ -148,6 +164,27 @@ public class SwerveModule {
     /***********************************************************************************/
     /*                      Helper functions/variables for debugging                   */
     /***********************************************************************************/
+	public void setSpeedDirect(double speed) {
+		int reverse = reverseSpeedMotor ? -1 : 1;
+		speedMotor.set(speed * reverse);
+	}
+
+	public void setDirectionDirect(double directionMagnitude) {
+		int reverse = reverseDirectionMotor ? -1 : 1;
+		directionMotor.set(directionMagnitude * reverse);
+	}
+
+	public void log() {
+		SmartDashboard.putNumber( moduleName + " drivePosition", getDrivePosition());
+		SmartDashboard.putNumber( moduleName + " driveVelocity", getDriveVelocity());
+		SmartDashboard.putNumber( moduleName + " absEnc", getAbsoluteEncoderRad() * (180 / Math.PI));
+
+		SmartDashboard.putNumber( moduleName + " drivePosition2",
+								  this.speedMotor.getPosition().getValue().baseUnitMagnitude());
+		SmartDashboard.putNumber( moduleName + " turningPosition2",
+								  this.directionMotor.getVelocity().getValue().baseUnitMagnitude());
+	}
+
     // Make the wheels rotate once for speed.
     private double nextOneSpeedRotationMeters = 0;
     public void setNextOneSpeedRotation(boolean backwards) {
@@ -176,11 +213,11 @@ public class SwerveModule {
     public void setNextOneDirectionRotation(boolean backwards) {
         double currDriveDirectionRad = getTurningPosition();
         if(backwards) {
-             nextOneDirectionRotationRad =
-                 currDriveDirectionRad - ModuleConsts.radiansPerWheelRotation;
+            nextOneDirectionRotationRad =
+                currDriveDirectionRad - ModuleConsts.radiansPerWheelRotation;
         } else {
             nextOneDirectionRotationRad =
-                 currDriveDirectionRad + ModuleConsts.radiansPerWheelRotation;
+                currDriveDirectionRad + ModuleConsts.radiansPerWheelRotation;
         }
     }
     public void moveForOneDirectionRotation() {
