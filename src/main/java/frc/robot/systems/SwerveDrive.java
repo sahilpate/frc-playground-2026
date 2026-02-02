@@ -89,23 +89,23 @@ public class SwerveDrive {
           rbModule.setDesiredState(moduleStates[3]);
 		*/
 
-		lfModule.setDesiredState(moduleStates[1]);
-        rfModule.setDesiredState(moduleStates[0]);
-        lbModule.setDesiredState(moduleStates[3]);
-        rbModule.setDesiredState(moduleStates[2]);
+        boolean ignoreLowSpeed = true;
+		lfModule.setDesiredState(moduleStates[1], ignoreLowSpeed);
+        rfModule.setDesiredState(moduleStates[0], ignoreLowSpeed);
+        lbModule.setDesiredState(moduleStates[3], ignoreLowSpeed);
+        rbModule.setDesiredState(moduleStates[2], ignoreLowSpeed);
     }
 
-	public void setWheelsToAngle(double angleRadians, double tmp) {
+	public void setWheelsToAngle(double angleRadians) {
 		double speed = 0;
 		Rotation2d rot2d = new Rotation2d(angleRadians);
 		SwerveModuleState swerveModuleState = new SwerveModuleState(speed, rot2d);
 
-		lfModule.setDesiredState(swerveModuleState);
-		rfModule.setDesiredState(swerveModuleState);
-		lbModule.setDesiredState(swerveModuleState);
-		rbModule.setDesiredState(swerveModuleState);
-
-		lfModule.log();
+        boolean ignoreLowSpeed = false;
+		lfModule.setDesiredState(swerveModuleState, ignoreLowSpeed);
+		rfModule.setDesiredState(swerveModuleState, ignoreLowSpeed);
+		lbModule.setDesiredState(swerveModuleState, ignoreLowSpeed);
+		rbModule.setDesiredState(swerveModuleState, ignoreLowSpeed);
 	}
 
     public void stopModules() {

@@ -7,11 +7,7 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 import frc.robot.systems.SwerveDrive;
-import frc.robot.systems.SwerveModule;
-import frc.robot.Constants.ConfigConsts;
 import frc.robot.Constants.DriveConsts;
-
-import edu.wpi.first.wpilibj.XboxController;
 
 public class Robot extends TimedRobot {
     XboxController controller = new XboxController(0);
@@ -27,7 +23,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void autonomousPeriodic() {
-        // swerve.stopModules();
+        swerve.stopModules();
     }
 
     @Override
@@ -36,10 +32,13 @@ public class Robot extends TimedRobot {
     @Override
     public void teleopPeriodic() {
         // swerve.stopModules();
-		// swerve.setWheelsToAngle(0, controller.getLeftY() * 0.8);
+		// swerve.setWheelsToAngle(0);
 
+        // Divide by 10 to limit translate speed.
 		double xSpeed = controller.getLeftX() * (DriveConsts.maxMetersPerSecToMotorSpeed / 10);
 		double ySpeed = controller.getLeftY() * (DriveConsts.maxMetersPerSecToMotorSpeed / 10);
+
+        // Divide by 5 to limit rotation speed.
 		double rotSpeed = controller.getRightX() * (DriveConsts.maxRadPerSecToMotorSpeed / 5);
 
 		swerve.setModules(ySpeed, xSpeed, rotSpeed);

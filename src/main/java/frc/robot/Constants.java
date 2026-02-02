@@ -14,7 +14,6 @@ public final class Constants {
         //     * lb: left-back
         //     * rb: right-back
 
-        // TODO: Fill in the actual IDs and booleans.
         public static final int lfSpeedMotorId = 1;
         public static final int lfDirectionMotorId = 2;
         public static final int lfEncoderId = 0;
@@ -49,14 +48,16 @@ public final class Constants {
     }
 
     public static final class ModuleConsts {
-        /******************* Constants for direction wheels *******************/
+        /******************* Constants for speed wheels *******************/
         public static final double wheelDiameterMeters = Units.inchesToMeters(4);
-        // TODO: I just picked 6.82 arbitrarily from WCP's gear ratio docs. We need
-        // to figure out what value actually belongs here. See:
-        // docs.wcproducts.com/welcome/gearboxes/wcp-swerve-x2/general-info/ratio-options
 
+        // OLD_TODO: I just picked 6.82 arbitrarily from WCP's gear ratio docs. We
+        // need to figure out what value actually belongs here. See:
+        // docs.wcproducts.com/welcome/gearboxes/wcp-swerve-x2/general-info/ratio-options
         // public static final double wheelRotationPerSpeedMotorRotation = 1 / 6.82;
-		// Grabbed from eyeballing...
+
+		// Grabbed from eyeballing... The ratios from the link above didn't seem to
+        // correlate with what was actually needed here at all.
 		public static final double wheelRotationPerSpeedMotorRotation =
 			1 / 42.22435516734016;
 
@@ -64,19 +65,6 @@ public final class Constants {
         public static final double metersPerWheelRotation = Math.PI * wheelDiameterMeters;
         public static final double speedMotorRotationToMeters =
             wheelRotationPerSpeedMotorRotation * metersPerWheelRotation;
-
-        /********************* Constants for angle wheels *********************/
-        // TODO: WCP docs say that this is the conversion in all configurations.
-        // Validate that this is actually true?
-        // docs.wcproducts.com/welcome/gearboxes/wcp-swerve-x2/general-info/ratio-options
-        public static final double directionMotorRotationPerWheelRotation = 12.1;
-        public static final double wheelRotationPerDirectionMotorRotation =
-            1 / directionMotorRotationPerWheelRotation;
-        public static final double radiansPerWheelRotation = 2 * Math.PI;
-        public static final double radiansPerDirectionMotorRotation =
-            wheelRotationPerDirectionMotorRotation * radiansPerWheelRotation;
-        public static final double motorRotationsPerRadian =
-            (1 / radiansPerWheelRotation) * directionMotorRotationPerWheelRotation;
 
         // "P" component of our direction PID controller.
         public static final double directionP = 0.75 / Math.PI;

@@ -7,10 +7,9 @@ import com.ctre.phoenix6.hardware.core.CoreCANcoder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants.DriveConsts;
 import frc.robot.Constants.ModuleConsts;
-
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class SwerveModule {
     private final TalonFX speedMotor;
@@ -22,11 +21,11 @@ public class SwerveModule {
     private final boolean reverseSpeedMotor;
     private final boolean reverseDirectionMotor;
     private final boolean reverseAbsoluteEncoder;
-
 	private final boolean reverseSpeedEncoder;
 
     private final PIDController directionController;
 
+    // Used to tell modules apart in SmartDashboard logging.
 	String moduleName;
 
     public SwerveModule(String moduleName, int speedMotorId, int directionMotorId,
@@ -45,15 +44,13 @@ public class SwerveModule {
         this.directionController = new PIDController(ModuleConsts.directionP, 0, 0);
         this.directionController.enableContinuousInput(-Math.PI, Math.PI);
 
-		// Used to tell motors apart in SmartDashboard logging.
 		this.moduleName = moduleName;
 
-        resetEncoders();
+        // Reset the speedMotor's encoder.
+        this.speedMotor.setPosition(0);
     }
 
     public double getDrivePosition() {
-        // TODO: Validate that the value this reports is accurate. If so, then
-        // getDriveVelocity() should also hopefully be accurate.
         double motorRotations =
             this.speedMotor.getPosition().getValue().baseUnitMagnitude();
 
@@ -79,50 +76,10 @@ public class SwerveModule {
         return metersPerSec * reverseFactor;
     }
 
-    public double getTurningPosition() {
-        // TODO: Validate that the value this reports is accurate.
-        double motorRotations =
-            this.directionMotor.getPosition().getValue().baseUnitMagnitude();
-
-        // Do the following unit coversion:
-        //     (MotorRotation) * (WheelRotationRadians / MotorRotation)
-        //         -> WheelRotationRadians
-        double radians =
-            motorRotations * ModuleConsts.radiansPerDirectionMotorRotation;
-
-        int reverseFactor = (this.reverseDirectionMotor ? -1 : 1);
-        return radians * reverseFactor;
-    }
-
-    public double getTurningVelocity() {
-        double motorRotationsPerSec =
-            this.directionMotor.getVelocity().getValue().baseUnitMagnitude();
-
-        // Do the following unit coversion:
-        //     (MotorRotation / Sec ) * (WheelRotationRadians / MotorRotation)
-        //         -> WheelRotationRadians
-        double radiansPerSec =
-            motorRotationsPerSec * ModuleConsts.radiansPerDirectionMotorRotation;
-
-        int reverseFactor = (this.reverseDirectionMotor ? -1 : 1);
-        return radiansPerSec * reverseFactor;
-    }
-
     public double getAbsoluteEncoderRad() {
         double angleRad =
             this.absoluteEncoder.getAbsolutePosition().getValue().baseUnitMagnitude();
         return (this.reverseAbsoluteEncoder ? -angleRad : angleRad);
-    }
-
-    public void resetEncoders() {
-        this.speedMotor.setPosition(0);
-
-        double absoluteEncoderRadians = getAbsoluteEncoderRad();
-        // Do the following unit coversion:
-        //     (Radians) * (MotorRotation / Radians) -> MotorRotation
-        double currMotorRotations =
-            absoluteEncoderRadians * ModuleConsts.motorRotationsPerRadian;
-        this.directionMotor.setPosition(currMotorRotations);
     }
 
     public SwerveModuleState getState() {
@@ -130,12 +87,12 @@ public class SwerveModule {
             getDriveVelocity(), new Rotation2d(getAbsoluteEncoderRad()));
     }
 
-    public void setDesiredState(SwerveModuleState state) {
+    public void setDesiredState(SwerveModuleState state, boolean ignoreLowSpeed) {
         // This "if" condition prevents the wheels from swinging back to their
         // neutral position when the joysticks are let go.
         // TODO: The "0.001" may need to be increased depending on the behavior we
         // observe when testing this.
-        if(Math.abs(state.speedMetersPerSecond) < 0.001) {
+        if(ignoreLowSpeed && Math.abs(state.speedMetersPerSecond) < 0.001) {
             stop();
             return;
         }
@@ -175,63 +132,12 @@ public class SwerveModule {
 	}
 
 	public void log() {
-		SmartDashboard.putNumber( moduleName + " drivePosition", getDrivePosition());
-		SmartDashboard.putNumber( moduleName + " driveVelocity", getDriveVelocity());
-		SmartDashboard.putNumber( moduleName + " absEnc", getAbsoluteEncoderRad() * (180 / Math.PI));
-
-		SmartDashboard.putNumber( moduleName + " drivePosition2",
-								  this.speedMotor.getPosition().getValue().baseUnitMagnitude());
-		SmartDashboard.putNumber( moduleName + " turningPosition2",
-								  this.directionMotor.getVelocity().getValue().baseUnitMagnitude());
+		SmartDashboard.putNumber( moduleName + " drivePosition",
+                                  getDrivePosition());
+		SmartDashboard.putNumber( moduleName + " driveVelocity",
+                                  getDriveVelocity());
+		SmartDashboard.putNumber( moduleName + " absEncoderDegrees",
+                                  getAbsoluteEncoderRad() * (180 / Math.PI));
 	}
 
-    // Make the wheels rotate once for speed.
-    private double nextOneSpeedRotationMeters = 0;
-    public void setNextOneSpeedRotation(boolean backwards) {
-        double currDrivePositionMeters = getDrivePosition();
-        if(backwards) {
-            nextOneSpeedRotationMeters =
-                currDrivePositionMeters - ModuleConsts.metersPerWheelRotation;
-        } else {
-            nextOneSpeedRotationMeters =
-                currDrivePositionMeters + ModuleConsts.metersPerWheelRotation;
-        }
-    }
-    public void moveForOneSpeedRotation() {
-        double currDrivePositionMeters = getDrivePosition();
-        // 5cm tolerance?
-        double toleranceMeters = 0.05;
-        if(currDrivePositionMeters < (nextOneSpeedRotationMeters - toleranceMeters)) {
-            speedMotor.set(0.1);
-        } else if (currDrivePositionMeters > (nextOneSpeedRotationMeters + toleranceMeters)) {
-            speedMotor.set(-0.1);
-        }
-    }
-
-    // Make the wheels rotate once for direction.
-    private double nextOneDirectionRotationRad = 0;
-    public void setNextOneDirectionRotation(boolean backwards) {
-        double currDriveDirectionRad = getTurningPosition();
-        if(backwards) {
-            nextOneDirectionRotationRad =
-                currDriveDirectionRad - ModuleConsts.radiansPerWheelRotation;
-        } else {
-            nextOneDirectionRotationRad =
-                currDriveDirectionRad + ModuleConsts.radiansPerWheelRotation;
-        }
-    }
-    public void moveForOneDirectionRotation() {
-        double currDriveDirectionRad = getTurningPosition();
-        // 5 degrees tolerance?
-        double toleranceRad = 5 * (Math.PI / 180);
-        if(currDriveDirectionRad < (nextOneDirectionRotationRad - toleranceRad)) {
-            directionMotor.set(0.1);
-        } else if (currDriveDirectionRad > (nextOneDirectionRotationRad + toleranceRad)) {
-            directionMotor.set(-0.1);
-        }
-    }
-
-    // TODO (for Sahil): Write a function that makes the wheels spin (speed or direction)
-    // at some configurable speed for X seconds. Mainly for deciding what we want our
-    // constants to be.
 }
